@@ -25,6 +25,66 @@ default_test_config = {
 }
 
 
+
+from transformers import CLIPVisionModel, CLIPImageProcessor
+
+ 
+
+class ClipVisionBackbone(nn.Module):
+
+    def __init__(self, model_name="openai/clip-vit-base-patch32"):
+
+        super().__init__()
+
+        self.clip_model = CLIPVisionModel.from_pretrained(model_name)
+
+        self.clip_processor = CLIPImageProcessor.from_pretrained(model_name)
+
+       
+
+        self.output_dim = self.clip_model.config.hidden_size  # 768 for ViT-B/32
+
+       
+
+    def forward(self, img: torch.Tensor) -> torch.Tensor:
+
+        """
+
+        img: Tensor of shape (B, 3, H, W), pixel values in [0,1] range.
+
+        """
+
+        # Preprocess: resize, normalize (inside processor)
+
+        processed = self.clip_processor(images=img, return_tensors="pt")
+
+        input_img = processed['pixel_values'].to(img.device)
+
+       
+
+        # Forward through CLIP vision encoder
+
+        outputs = self.clip_model(pixel_values=input_img)
+
+       
+
+        # Remove CLS token and reshape
+
+        features = outputs.last_hidden_state[:, 1:, :]  # (B, N, C)
+
+       
+
+        B, N, C = features.shape
+
+        feat_size = int(N ** 0.5)
+
+        features = features.permute(0, 2, 1).view(B, C, feat_size, feat_size)  # (B, C, H', W')
+
+       
+
+        return features
+
+
 class MonoConDetector(nn.Module):
     def __init__(self,
                  num_dla_layers: int = 34,
@@ -34,9 +94,13 @@ class MonoConDetector(nn.Module):
         
         super().__init__()
         
-        self.backbone = DLA(num_dla_layers, pretrained=pretrained_backbone)
-        self.neck = DLAUp(self.backbone.get_out_channels(start_level=2), start_level=2)
-        
+        self.backbone = ClipVisionBackbone(model_name="openai/clip-vit-base-patch32") #self.neck = None # No neck needed head_in_ch = self.backbone.output_dim # 768
+
+
+        # self.backbone = DLA(num_dla_layers, pretrained=pretrained_backbone)
+        # self.neck = DLAUp(self.backbone.get_out_channels(start_level=2), start_level=2)
+        self.neck = None  # No neck needed
+
         if head_config is None:
             head_config = default_head_config
         if test_config is None:
@@ -47,7 +111,7 @@ class MonoConDetector(nn.Module):
         else:
             head_in_ch = 128
             
-        self.head = MonoConDenseHeads(in_ch=head_in_ch, test_config=test_config, **head_config)
+        self.head = MonoConDenseHeads(in_ch=self.backbone.output_dim, test_config=test_config, **head_config)
         
         
     def forward(self, data_dict: Dict[str, Any], return_loss: bool = True) -> Tuple[Dict[str, torch.Tensor]]:

@@ -1,0 +1,59 @@
+services:
+  dinov2:
+    image: spped2000/dinov2manyproblem:lastest
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+          memory: 16G
+        limits:
+          memory: 32G
+    shm_size: '8gb'
+    ports:
+      - "8888:8888"
+      - "6006:6006"
+    volumes:
+      - type: bind
+        source: ${PWD}
+        target: /workspace
+      - type: bind
+        source: /home/desktop/work/datasets/KITTI_3D
+        target: /workspace/datasets/KITTI_3D
+        read_only: true
+      - pytorch_tmp:/tmp/pytorch
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - JUPYTER_ENABLE_LAB=yes
+      - TF_CPP_MIN_LOG_LEVEL=3
+      - PYTHONWARNINGS=ignore::FutureWarning
+      - TORCH_HOME=/tmp/pytorch
+      - OMP_NUM_THREADS=8
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+      - TORCH_CUDA_ARCH_LIST="8.9"
+    runtime: nvidia
+    ulimits:
+      memlock: -1
+      stack: 67108864
+      nofile:
+        soft: 65536
+        hard: 65536
+    working_dir: /workspace
+    hostname: desktop
+    command: >
+      bash -c "
+        pip uninstall -y xformers &&
+        pip install 'xformers==0.0.22.post7+cu118' --index-url https://download.pytorch.org/whl/cu118 &&
+        pip install transformers
+        pip install yacs
+        pip install numba==0.56.0
+        pip install tensorboard==2.10.0
+        tensorboard --logdir=/workspace/metric_depth/exp --port 6006 --bind_all --reload_multifile=true --reload_interval=1  && 
+        jupyter lab --ip 0.0.0.0 --port 8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
+      "
+
+volumes:
+  pytorch_tmp:
+    driver: local

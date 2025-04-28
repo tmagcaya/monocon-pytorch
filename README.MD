@@ -1,3 +1,10 @@
+docker exec -it monocon-pytorch-dinov2-1 bash
+pip install yacs
+pip install numba==0.56.0
+pip install tensorboard==2.10.0
+Data: /home/desktop/work/datasets
+
+
 # MonoCon (AAAI, 2022)
 This repository contains unofficial pytorch implementation for **[MonoCon: Learning Auxiliary Monocular Contexts Helps Monocular 3D Object Detection (AAAI, 2022)](https://arxiv.org/abs/2112.04628)**.   
 We have removed the dependency on [mmdetection3d](https://github.com/open-mmlab/mmdetection3d) from the original author's [code](https://github.com/Xianpeng919/MonoCon).

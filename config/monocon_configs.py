@@ -15,7 +15,7 @@ _C.USE_BENCHMARK = True                          # Value of 'torch.backends.cudn
 
 # Data
 _C.DATA = CN()
-_C.DATA.ROOT = r'/home/user/SSD/KITTI'                  # KITTI Root
+_C.DATA.ROOT = r'/workspace/datasets/KITTI_3D'                  # KITTI Root
 _C.DATA.BATCH_SIZE = 8
 _C.DATA.NUM_WORKERS = 4
 _C.DATA.TRAIN_SPLIT = 'train'
